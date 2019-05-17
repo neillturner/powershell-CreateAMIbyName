@@ -39,23 +39,12 @@ param
     [Parameter(Mandatory = $true)]
     [string]$note,
     [Parameter(Mandatory = $false)]
-    [boolean]$up,
-    [Parameter(Mandatory = $false)]
     [string]$platform
 )
 Import-Module AWSPowerShell
 $platform = $platform.ToUpper()
-switch ($up)
-{
-    $TRUE {
-        $array = @($instanceNameTag.ToUpper())
 
-    }
-    default
-    {
-        $array = @($instanceNameTag)
-    }
-}
+$array = @($instanceNameTag)
 
 foreach ($nameTag in $array) # Process all supplied name tags after making sure they are upper-cased. Our convention is upper-case instance name tags
 {
