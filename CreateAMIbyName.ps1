@@ -88,7 +88,7 @@ foreach ($nameTag in $array) # Process all supplied name tags after making sure 
                 } # End if
                 else
                 {
-
+                    Write-Host "Create Image for Instance" -ForegroundColor Green
                     $longTime = Get-Date -Format "yyyy-MM-dd_HH-mm-ss" # Get current time into a string
                     $tagDesc = "Created by " + $MyInvocation.MyCommand.Name + " on " + $longTime + " with comment: " + $note # Make a nice string for the AMI Description tag
                     $amiName = $nameTag + " AMI " + $longTime # Make a name for the AMI
@@ -98,13 +98,17 @@ foreach ($nameTag in $array) # Process all supplied name tags after making sure 
 
                     $shortTime = Get-Date -Format "yyyy-MM-dd" # Shorter date for the name tag
                     $tagName = $nameTag + " AMI " + $shortTime # Sting for use with the name TAG -- as opposed to the AMI name, which is something else and set in New-EC2Image
-
-                    New-EC2Tag -Resources $amiID -Tags @(@{ Key = "Name"; Value = $tagName }, @{ Key = "Description"; Value = $tagDesc }, @{ Key = 'Platform'; Value = $platform }) # Add tags to new AMI
+                    [Amazon.EC2.Model.Tag]$tag = @{ Key = "Name"; Value = $tagName }
+                    [Amazon.EC2.Model.Tag]$tagDesc = @{ Key = "Description"; Value = $tagDesc }
+                    [Amazon.EC2.Model.Tag]$tagPlat = @{ Key = 'Platform'; Value = $platform }
+                    New-EC2Tag -Resources $amiID -Tag $tag
+                    New-EC2Tag -Resources $amiID -Tag $tagDesc
+                    New-EC2Tag -Resources $amiID -Tag $tagPlat
 
                     $amiProperties = Get-EC2Image -ImageIds $amiID # Get Amazon.EC2.Model.Image
                     $amiBlockDeviceMapping = $amiProperties.BlockDeviceMapping # Get Amazon.Ec2.Model.BlockDeviceMapping
                     $amiBlockDeviceMapping.ebs | `
-                    ForEach-Object -Process { New-EC2Tag -Resources $_.SnapshotID -Tags @(@{ Key = "Name"; Value = $amiName }, @{ Key = 'Platform'; Value = $platform }) } # Add tags to snapshots associated with the AMI using Amazon.EC2.Model.EbsBlockDevice
+                    ForEach-Object -Process { New-EC2Tag -Resources $_.SnapshotID -Tag $tag } # Add tags to snapshots associated with the AMI using Amazon.EC2.Model.EbsBlockDevice
                     Write-Host "`nCompleted instance $($instance.InstanceID), new AMI = $($amiID) " -ForegroundColor Yellow
                 }
             }
