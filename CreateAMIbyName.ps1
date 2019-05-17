@@ -101,14 +101,14 @@ foreach ($nameTag in $array) # Process all supplied name tags after making sure 
                     [Amazon.EC2.Model.Tag]$tag = @{ Key = "Name"; Value = $tagName }
                     [Amazon.EC2.Model.Tag]$tagDesc = @{ Key = "Description"; Value = $tagDesc }
                     [Amazon.EC2.Model.Tag]$tagPlat = @{ Key = 'Platform'; Value = $platform }
-                    New-EC2Tag -ResourceId $amiID -Tag $tag
-                    New-EC2Tag -ResourceId $amiID -Tag $tagDesc
-                    New-EC2Tag -ResourceId $amiID -Tag $tagPlat
+                    New-EC2Tag -Resource $amiID -Tag $tag
+                    New-EC2Tag -Resource $amiID -Tag $tagDesc
+                    New-EC2Tag -Resource $amiID -Tag $tagPlat
 
                     $amiProperties = Get-EC2Image -ImageIds $amiID # Get Amazon.EC2.Model.Image
                     $amiBlockDeviceMapping = $amiProperties.BlockDeviceMapping # Get Amazon.Ec2.Model.BlockDeviceMapping
                     $amiBlockDeviceMapping.ebs | `
-                    ForEach-Object -Process { New-EC2Tag -ResourceId $_.SnapshotID -Tag $tag } # Add tags to snapshots associated with the AMI using Amazon.EC2.Model.EbsBlockDevice
+                    ForEach-Object -Process { New-EC2Tag -Resource $_.SnapshotID -Tag $tag } # Add tags to snapshots associated with the AMI using Amazon.EC2.Model.EbsBlockDevice
                     Write-Host "`nCompleted instance $($instance.InstanceID), new AMI = $($amiID) " -ForegroundColor Yellow
                 }
             }
