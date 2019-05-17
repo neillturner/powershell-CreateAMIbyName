@@ -76,10 +76,11 @@ foreach ($nameTag in $array) # Process all supplied name tags after making sure 
                 "Platform tag to be used: $platform"
                 $title = 'Create AMI for this instance?'
                 $prompt = '[Y]es or [N]o?'
-                $yes = New-Object System.Management.Automation.Host.ChoiceDescription '&Yes', 'Continues'
-                $no = New-Object System.Management.Automation.Host.ChoiceDescription '&No', 'Exits'
-                $options = [System.Management.Automation.Host.ChoiceDescription[]] ($yes, $no)
-                $choice = $host.ui.PromptForChoice($title, $prompt, $options, 0)
+                #$yes = New-Object System.Management.Automation.Host.ChoiceDescription '&Yes', 'Continues'
+                #$no = New-Object System.Management.Automation.Host.ChoiceDescription '&No', 'Exits'
+                #$options = [System.Management.Automation.Host.ChoiceDescription[]] ($yes, $no)
+                #$choice = $host.ui.PromptForChoice($title, $prompt, $options, 0)
+                $choice = 0
                 If ($choice -eq 1)
                 {
                     Write-Host "Instance skipped" -ForegroundColor Red
