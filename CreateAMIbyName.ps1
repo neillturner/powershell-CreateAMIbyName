@@ -38,7 +38,7 @@ param
     [string[]]$instanceNameTag,
     [Parameter(Mandatory = $true)]
     [string]$note,
-    [Parameter(Mandatory = $true)]
+    [Parameter(Mandatory = $false)]
     [boolean]$up,
     [Parameter(Mandatory = $false)]
     [string]$platform
