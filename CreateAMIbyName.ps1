@@ -93,7 +93,7 @@ foreach ($nameTag in $array) # Process all supplied name tags after making sure 
                     $tagDesc = "Created by " + $MyInvocation.MyCommand.Name + " on " + $longTime + " with comment: " + $note # Make a nice string for the AMI Description tag
                     $amiName = $nameTag + " AMI " + $longTime # Make a name for the AMI
 
-                    $amiID = New-EC2Image -InstanceId $instance.InstanceId -Description $tagDesc -Name $amiName -NoReboot:$false # Create the AMI, rebooting the instance in the process
+                    $amiID = New-EC2Image -InstanceId $instance.InstanceId -Description $tagDesc -Name $amiName -NoReboot:$true # Create the AMI, without rebooting the instance in the process
                     Start-Sleep -Seconds 90 # Wait a few seconds just to make sure the call to Get-EC2Image will return the assigned objects for this AMI
 
                     $shortTime = Get-Date -Format "yyyy-MM-dd" # Shorter date for the name tag
