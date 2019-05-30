@@ -84,13 +84,19 @@ foreach ($nameTag in $array) # Process all supplied name tags after making sure 
                     $rootVolume = $instance.BlockDeviceMappings | Where-Object {$_.DeviceName -eq '/dev/sda1'}
                     $vol = $rootVolume.Ebs.VolumeId
                     $snap = New-EC2Snapshot -VolumeId $vol -Description $nameTag -Force
-                    Start-Sleep -Seconds 90 # Wait a few seconds just to make sure the call to Get-EC2Image will return the assigned objects for this AMI
-                    
+                    Write-Host "Wait for snapshot to be completed" -ForegroundColor Green
+                    Start-Sleep -Seconds 90 # Wait a few seconds just to make sure the call to New-EC2Snapshot will return the assigned objects for this snapshot
+                    $snapLatest = Get-EC2Snapshot -SnapshotId $snap.SnapshotID
+                    while ($snapLatest.State -ne 'completed') {
+                      Start-Sleep -Seconds 90
+                      $snapLatest = Get-EC2Snapshot -SnapshotId $snap.SnapshotID
+                    }
+
                     Write-Host "Create Image for Instance" -ForegroundColor Green
                     $snapId = $snap.SnapshotID
                     $ebsBlock1 = @{SnapshotId=$snapId}
                     $amiID = Register-EC2Image -Name $amiName -Description $tagDesc -RootDeviceName '/dev/sda1' -BlockDeviceMapping @( @{DeviceName="/dev/sda1";Ebs=$ebsBlock1})
-                    Start-Sleep -Seconds 90 # Wait a few seconds just to make sure the call to Get-EC2Image will return the assigned objects for this AMI
+                    Start-Sleep -Seconds 90 # Wait a few seconds just to make sure the call to Register-EC2Image will return the assigned objects for this AMI
 
 
                     $shortTime = Get-Date -Format "yyyy-MM-dd" # Shorter date for the name tag
