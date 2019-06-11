@@ -39,7 +39,7 @@ param
     [Parameter(Mandatory = $true)]
     [string]$note,
     [Parameter(Mandatory = $false)]
-    [string]$platform
+    [string]$platform,
     [Parameter(Mandatory = $false)]
     [string]$architecture
 )
