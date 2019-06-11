@@ -40,9 +40,14 @@ param
     [string]$note,
     [Parameter(Mandatory = $false)]
     [string]$platform
+    [Parameter(Mandatory = $false)]
+    [string]$architecture
 )
 Import-Module AWSPowerShell
 $platform = $platform.ToUpper()
+if ($architecture -eq "") {
+   $architecture = "x86_64"
+ }
 
 $array = @($instanceNameTag)
 
@@ -95,7 +100,7 @@ foreach ($nameTag in $array) # Process all supplied name tags after making sure 
                     Write-Host "Create Image for Instance" -ForegroundColor Green
                     $snapId = $snap.SnapshotID
                     $ebsBlock1 = @{SnapshotId=$snapId}
-                    $amiID = Register-EC2Image -Name $amiName -Description $tagDesc -RootDeviceName '/dev/sda1' -BlockDeviceMapping @( @{DeviceName="/dev/sda1";Ebs=$ebsBlock1})
+                    $amiID = Register-EC2Image -Name $amiName -Description $tagDesc -Architecture $architecture -VirtualizationType 'hvm' -RootDeviceName '/dev/sda1' -BlockDeviceMapping @( @{DeviceName="/dev/sda1";Ebs=$ebsBlock1})
                     Start-Sleep -Seconds 90 # Wait a few seconds just to make sure the call to Register-EC2Image will return the assigned objects for this AMI
 
 
