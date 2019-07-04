@@ -28,7 +28,7 @@ pipeline {
                  script {
                      git branch: 'master',
                         url: 'https://github.com/neillturner/powershell-CreateAMIbyName.git'
-                     powershell returnStatus: true, script: ".\\RunSysprep.ps1 -instanceNameTag ${params.instanceNameTag}
+                     powershell returnStatus: true, script: ".\\RunSysprep.ps1 -instanceNameTag ${params.instanceNameTag}"
                      powershell returnStatus: true, script: ".\\CreateRootAMIbyName.ps1 -instanceNameTag ${params.instanceNameTag}-note ${params.note} -architecture i386 "
 
                  }
