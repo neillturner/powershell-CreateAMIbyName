@@ -30,7 +30,7 @@ foreach ($nameTag in $array)
             }
             { ($_ -eq 16) } {
                 # Status is running
-                Write-Host "`nSysprep the instance for $nameTag from instance $($instance.InstanceID), status = $($instance.state.name)?" -ForegroundColor Yellow
+                Write-Host "`nSysprep script $($scriptName) the instance for $nameTag from instance $($instance.InstanceID), status = $($instance.state.name)?" -ForegroundColor Yellow
                 $cmd = Send-SSMCommand -InstanceId $instance.InstanceID -DocumentName AWS-RunPowerShellScript -Comment 'sysprep the instance' -Parameter @{'commands'=@($scriptName)}
                 Start-Sleep -Seconds 15 # Wait a few seconds to let it complete
                 $result = Get-SSMCommand -CommandId $runPSCommand.CommandId
