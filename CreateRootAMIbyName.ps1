@@ -1,5 +1,5 @@
 <#
-Create an AMI from root volume of a running instance by using the instance's name tag and tag the resulting AMI and all snapshots with a meaningful tag
+Create an AMI of Root Volume from a running instance by using the instance's name tag and tag the resulting AMI with a meaningful tag
 Copyright 2017 Air11 Technology LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,7 +24,7 @@ limitations under the License.
         2017-03-28 substantially revised to allow for duplicate instance name tags and to permit only running or stopped instances
 
     .INPUT
-        ./CreateAMIbyName -instanceNameTag [InstanceNameTag[] ] -up [$true | $false] -note [string] -platform [ string ]
+        ./CreateRootAMIbyName -instanceNameTag [InstanceNameTag[] ] -up [$true | $false] -note [string] -platform [ string ]
         $instanceNameTag must be the exact instance name tag for the instance
         $up (optional) uppercases lowercase name input
         $note is a string to be stored in the comment and log file
@@ -39,15 +39,10 @@ param
     [Parameter(Mandatory = $true)]
     [string]$note,
     [Parameter(Mandatory = $false)]
-    [string]$platform,
-    [Parameter(Mandatory = $false)]
-    [string]$architecture
+    [string]$platform
 )
 Import-Module AWSPowerShell
 $platform = $platform.ToUpper()
-if ($architecture -eq "") {
-   $architecture = "x86_64"
- }
 
 $array = @($instanceNameTag)
 
@@ -74,6 +69,8 @@ foreach ($nameTag in $array) # Process all supplied name tags after making sure 
                 #$no = New-Object System.Management.Automation.Host.ChoiceDescription '&No', 'Exits'
                 #$options = [System.Management.Automation.Host.ChoiceDescription[]] ($yes, $no)
                 #$choice = $host.ui.PromptForChoice($title, $prompt, $options, 0)
+		$devices = @()
+		$bm_array = @()
                 $choice = 0
                 If ($choice -eq 1)
                 {
@@ -82,27 +79,23 @@ foreach ($nameTag in $array) # Process all supplied name tags after making sure 
                 } # End if
                 else
                 {
-                    Write-Host "Create Snapshot for Instance root volume" -ForegroundColor Green
+                    Write-Host "Create Image for Instance" -ForegroundColor Green
                     $longTime = Get-Date -Format "yyyy-MM-dd_HH-mm-ss" # Get current time into a string
                     $tagDesc = "Created by " + $MyInvocation.MyCommand.Name + " on " + $longTime + " with comment: " + $note # Make a nice string for the AMI Description tag
                     $amiName = $nameTag + " AMI " + $longTime # Make a name for the AMI
-                    $rootVolume = $instance.BlockDeviceMappings | Where-Object {$_.DeviceName -eq '/dev/sda1'}
-                    $vol = $rootVolume.Ebs.VolumeId
-                    $snap = New-EC2Snapshot -VolumeId $vol -Description $nameTag -Force
-                    Write-Host "Wait for snapshot to be completed" -ForegroundColor Green
-                    Start-Sleep -Seconds 90 # Wait a few seconds just to make sure the call to New-EC2Snapshot will return the assigned objects for this snapshot
-                    $snapLatest = Get-EC2Snapshot -SnapshotId $snap.SnapshotID
-                    while ($snapLatest.State -ne 'completed') {
-                      Start-Sleep -Seconds 90
-                      $snapLatest = Get-EC2Snapshot -SnapshotId $snap.SnapshotID
+                    foreach($bm in $instance.BlockDeviceMappings) {
+         	      if ($bm.DeviceName -ne  "/dev/sda1") { 
+           		$devices += $bm.DeviceName
+         	      }
+       		    }
+       		    foreach($d in $devices) {
+       			$b = New-Object -TypeName Amazon.EC2.Model.BlockDeviceMapping
+       			$b.DeviceName = $d
+       			$b.VirtualName= "ephemeral0"
+                        $bm_array += $b
                     }
-
-                    Write-Host "Create Image for Instance" -ForegroundColor Green
-                    $snapId = $snap.SnapshotID
-                    $ebsBlock1 = @{SnapshotId=$snapId}
-                    $amiID = Register-EC2Image -Name $amiName -Description $tagDesc -Architecture $architecture -VirtualizationType 'hvm' -RootDeviceName '/dev/sda1' -BlockDeviceMapping @( @{DeviceName="/dev/sda1";Ebs=$ebsBlock1})
-                    Start-Sleep -Seconds 90 # Wait a few seconds just to make sure the call to Register-EC2Image will return the assigned objects for this AMI
-
+                    $amiID = New-EC2Image -InstanceId $instance.InstanceId -Description $tagDesc -Name $amiName -BlockDeviceMapping $bm_array -NoReboot:$true # Create the AMI, without rebooting the instance in the process
+                    Start-Sleep -Seconds 90 # Wait a few seconds just to make sure the call to Get-EC2Image will return the assigned objects for this AMI
 
                     $shortTime = Get-Date -Format "yyyy-MM-dd" # Shorter date for the name tag
                     $tagName = $nameTag + " AMI " + $shortTime # Sting for use with the name TAG -- as opposed to the AMI name, which is something else and set in New-EC2Image
@@ -112,11 +105,7 @@ foreach ($nameTag in $array) # Process all supplied name tags after making sure 
                     New-EC2Tag -Resources $amiID -Tag $tag
                     New-EC2Tag -Resources $amiID -Tag $tagDesc
                     New-EC2Tag -Resources $amiID -Tag $tagPlat
-
-                    $amiProperties = Get-EC2Image -ImageIds $amiID # Get Amazon.EC2.Model.Image
-                    $amiBlockDeviceMapping = $amiProperties.BlockDeviceMapping # Get Amazon.Ec2.Model.BlockDeviceMapping
-                    $amiBlockDeviceMapping.ebs | `
-                    ForEach-Object -Process { New-EC2Tag -Resources $_.SnapshotID -Tag $tag } # Add tags to snapshots associated with the AMI using Amazon.EC2.Model.EbsBlockDevice
+ 
                     Write-Host "`nCompleted instance $($instance.InstanceID), new AMI = $($amiID) " -ForegroundColor Yellow
                 }
             }
