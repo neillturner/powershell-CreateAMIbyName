@@ -24,13 +24,13 @@ limitations under the License.
         2017-03-28 substantially revised to allow for duplicate instance name tags and to permit only running or stopped instances
 
     .INPUT
-        ./CreateRootAMIbyName -instanceNameTag [InstanceNameTag[] ] [-snapebs] -note [string] -platform [ string ]
+        ./CreateRootAMIbyName -instanceNameTag [InstanceNameTag[] ] -snapebs [$true | $false] -note [string] -platform [ string ]
         $instanceNameTag must be the exact instance name tag for the instance
         $note is a string to be stored in the comment and log file
         $platform is tag:Platform info that is added to the AMI's and snapshots' tags
-        $snapebs (optional) Create snapshots of attached EBS disks
+        $snapebs is boolean (optional) to Create snapshots of attached EBS disks
     .EXAMPLE
-        ./CreateRootAmibyName -instanceNameTag "MyInstance1, MyInstance2"  -snapebs -note "This comment is stored in the AMI description" -platform "BillingApp"
+        ./CreateRootAmibyName -instanceNameTag "MyInstance1, MyInstance2"  -snapebs $true -note "This comment is stored in the AMI description" -platform "BillingApp"
 #>
 param
 (
@@ -41,7 +41,7 @@ param
     [Parameter(Mandatory = $false)]
     [string]$platform,
     [Parameter(Mandatory = $false)]
-    [switch]$snapebs
+    [boolean]$snapebs
 )
 Import-Module AWSPowerShell
 $platform = $platform.ToUpper()
