@@ -24,13 +24,13 @@ limitations under the License.
         2017-03-28 substantially revised to allow for duplicate instance name tags and to permit only running or stopped instances
 
     .INPUT
-        ./CreateRootAMIbyName -instanceNameTag [InstanceNameTag[] ] -up [$true | $false] -note [string] -platform [ string ]
+        ./CreateRootAMIbyName -instanceNameTag [InstanceNameTag[] ] [-snapebs] -note [string] -platform [ string ]
         $instanceNameTag must be the exact instance name tag for the instance
-        $up (optional) uppercases lowercase name input
         $note is a string to be stored in the comment and log file
         $platform is tag:Platform info that is added to the AMI's and snapshots' tags
+        $snapebs (optional) Create snapshots of attached EBS disks
     .EXAMPLE
-        ./CreateRootAmibyName -instanceNameTag "MyInstance1, MyInstance2", -up $true, -note "This comment is stored in the AMI description" -platform "BillingApp"
+        ./CreateRootAmibyName -instanceNameTag "MyInstance1, MyInstance2"  -snapebs -note "This comment is stored in the AMI description" -platform "BillingApp"
 #>
 param
 (
@@ -39,7 +39,9 @@ param
     [Parameter(Mandatory = $true)]
     [string]$note,
     [Parameter(Mandatory = $false)]
-    [string]$platform
+    [string]$platform,
+    [Parameter(Mandatory = $false)]
+    [switch]$snapebs
 )
 Import-Module AWSPowerShell
 $platform = $platform.ToUpper()
@@ -69,10 +71,10 @@ foreach ($nameTag in $array) # Process all supplied name tags after making sure 
                 #$no = New-Object System.Management.Automation.Host.ChoiceDescription '&No', 'Exits'
                 #$options = [System.Management.Automation.Host.ChoiceDescription[]] ($yes, $no)
                 #$choice = $host.ui.PromptForChoice($title, $prompt, $options, 0)
-		$devices = @()
-		$bm_array = @()
+                $devices = @()
+                $bm_array = @()
                 $choice = 0
-                If ($choice -eq 1)
+                if ($choice -eq 1)
                 {
                     Write-Host "Instance skipped" -ForegroundColor Red
                     Break
@@ -84,14 +86,17 @@ foreach ($nameTag in $array) # Process all supplied name tags after making sure 
                     $tagDesc = "Created by " + $MyInvocation.MyCommand.Name + " on " + $longTime + " with comment: " + $note # Make a nice string for the AMI Description tag
                     $amiName = $nameTag + " AMI " + $longTime # Make a name for the AMI
                     foreach($bm in $instance.BlockDeviceMappings) {
-         	      if ($bm.DeviceName -ne  "/dev/sda1") { 
-           		$devices += $bm.DeviceName
-         	      }
-       		    }
-       		    foreach($d in $devices) {
-       			$b = New-Object -TypeName Amazon.EC2.Model.BlockDeviceMapping
-       			$b.DeviceName = $d
-       			$b.VirtualName= "ephemeral0"
+                        if ($bm.DeviceName -ne  "/dev/sda1") {
+                            $devices += $bm.DeviceName
+                        }
+                    }
+
+                    [Int]$i = 0
+                    foreach($d in $devices) {
+                        $b = New-Object -TypeName Amazon.EC2.Model.BlockDeviceMapping
+                        $b.DeviceName = $d
+                        $b.VirtualName= "ephemeral" + $i.ToString()
+                        $i++
                         $bm_array += $b
                     }
                     $amiID = New-EC2Image -InstanceId $instance.InstanceId -Description $tagDesc -Name $amiName -BlockDeviceMapping $bm_array -NoReboot:$true # Create the AMI, without rebooting the instance in the process
@@ -107,6 +112,38 @@ foreach ($nameTag in $array) # Process all supplied name tags after making sure 
                     New-EC2Tag -Resources $amiID -Tag $tagPlat
  
                     Write-Host "`nCompleted instance $($instance.InstanceID), new AMI = $($amiID) " -ForegroundColor Yellow
+
+                    switch ($snapebs)
+                    {
+                        $true {
+                            Write-Host "Create Snapshots of attached EBS disks for Instance" -ForegroundColor Green
+
+                            foreach($bm in $instance.BlockDeviceMappings) {
+                                if ($bm.DeviceName -ne  "/dev/sda1") {
+                                    $volId = $bm.ebs.VolumeId
+                                    $vol = Get-EC2Volume -VolumeId $volId
+                                    #  get name tag for volume
+                                    $volTags = $vol.Tags
+                                    $volName = $volTags.Where({$_.Key -eq "Name"}).Value
+
+                                    # create snapshot with name as per vol name tag
+                                    $shortTime = Get-Date -Format "yyyy-MM-dd" # Shorter date for the name tag
+                                    $snapDesc =  $volName + " " + $shortTime
+
+                                    Write-Host "`nCreate snapshot for volume = $($volId) $($volName) " -ForegroundColor Yellow
+
+                                    $snap = New-EC2Snapshot -VolumeId $volId -Description $snapDesc -Force
+                                    [Amazon.EC2.Model.Tag]$snapTag = @{ Key = "Name"; Value = $volName }
+                                    New-EC2Tag -Resources $snap.SnapshotId -Tag $snapTag
+                                    Write-Host "`nCompleted snapshot $($snap.SnapshotId), for volume = $($volId) $($volName) " -ForegroundColor Yellow
+                                }
+                            }
+                        }
+                        default
+                        {
+                            Write-Host "Creating Snapshots of attached EBS disks skipped" -ForegroundColor Red
+                        }
+                    }
                 }
             }
             32 {
