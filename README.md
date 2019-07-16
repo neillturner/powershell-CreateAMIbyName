@@ -21,6 +21,7 @@ pipeline {
         choice(choices: ['servera','serverb'],
         description: 'What EC2 Instance?', name: 'instanceNameTag')
         string(defaultValue: "backup", description: 'What comment?', name: 'note')
+        booleanParam(name: 'snapebs', defaultValue: false, description: 'Snapshot attached EBS Disks? ')
      }
      stages {
          stage ('CreateAMIByName') {
@@ -29,8 +30,7 @@ pipeline {
                      git branch: 'master',
                         url: 'https://github.com/neillturner/powershell-CreateAMIbyName.git'
                      powershell returnStatus: true, script: ".\\RunSysprep.ps1 -instanceNameTag ${params.instanceNameTag}"
-                     powershell returnStatus: true, script: ".\\CreateRootAMIbyName.ps1 -instanceNameTag ${params.instanceNameTag}-note ${params.note} -architecture i386 "
-
+                     powershell returnStatus: true, script: ".\\CreateRootAMIbyName.ps1 -instanceNameTag ${params.instanceNameTag} -note ${params.note}  -snapebs \$${params.snapebs} "
                  }
              }
          }
