@@ -91,20 +91,17 @@ foreach ($nameTag in $array) # Process all supplied name tags after making sure 
                         }
                     }
 
-                    [Int]$i = 0
                     foreach($d in $devices) {
                         $b = New-Object -TypeName Amazon.EC2.Model.BlockDeviceMapping
                         $b.DeviceName = $d
-                        $b.VirtualName= "ephemeral" + $i.ToString()
-                        $i++
+                        $b.NoDevice = ""
                         $bm_array += $b
                     }
+
                     $amiID = New-EC2Image -InstanceId $instance.InstanceId -Description $tagDesc -Name $amiName -BlockDeviceMapping $bm_array -NoReboot:$true # Create the AMI, without rebooting the instance in the process
                     Start-Sleep -Seconds 90 # Wait a few seconds just to make sure the call to Get-EC2Image will return the assigned objects for this AMI
 
-                    $shortTime = Get-Date -Format "yyyy-MM-dd" # Shorter date for the name tag
-                    $tagName = $nameTag + " AMI " + $shortTime # Sting for use with the name TAG -- as opposed to the AMI name, which is something else and set in New-EC2Image
-                    [Amazon.EC2.Model.Tag]$tag = @{ Key = "Name"; Value = $tagName }
+                    [Amazon.EC2.Model.Tag]$tag = @{ Key = "Name"; Value = $nameTag }
                     [Amazon.EC2.Model.Tag]$tagDesc = @{ Key = "Description"; Value = $tagDesc }
                     [Amazon.EC2.Model.Tag]$tagPlat = @{ Key = 'Platform'; Value = $platform }
                     New-EC2Tag -Resources $amiID -Tag $tag
